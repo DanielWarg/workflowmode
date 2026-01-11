@@ -13,13 +13,16 @@ import {
     useNodesState,
     useEdgesState,
     type ReactFlowInstance,
+    getNodesBounds,
+    getViewportForBounds,
 } from '@xyflow/react';
+import { toPng } from 'html-to-image';
 import '@xyflow/react/dist/style.css';
 import { useLanguage } from '@/components/LanguageProvider';
 
 import type { WorkflowSpec, Node as WFNode, Lane } from '@/lib/schema';
 import { StartNode, EndNode, StepNode, DecisionNode } from './nodes';
-import { WorkflowIcon } from './icons';
+import { WorkflowIcon, DownloadIcon } from './icons';
 
 // ============================================
 // Constants
@@ -135,7 +138,9 @@ function LaneBackground({ lanes, height, isDark }: LaneBackgroundProps) {
 interface WorkflowCanvasProps {
     spec: WorkflowSpec | null;
     previewSpec?: WorkflowSpec | null;
+    previewSpec?: WorkflowSpec | null;
     onNodeClick?: (nodeId: string) => void;
+    onNodesDelete?: (deletedNodes: Node[]) => void;
     theme?: 'dark' | 'light';
     fitViewTrigger?: number;
 }
@@ -147,7 +152,7 @@ const nodeTypes: NodeTypes = {
     decision: DecisionNode,
 };
 
-export function WorkflowCanvas({ spec, previewSpec, onNodeClick, theme = 'dark', fitViewTrigger }: WorkflowCanvasProps) {
+export function WorkflowCanvas({ spec, previewSpec, onNodeClick, onNodesDelete, theme = 'dark', fitViewTrigger }: WorkflowCanvasProps) {
     const isDark = theme === 'dark';
     const activeSpec = previewSpec ?? spec;
     const { t } = useLanguage();
@@ -179,7 +184,40 @@ export function WorkflowCanvas({ spec, previewSpec, onNodeClick, theme = 'dark',
             onNodeClick?.(node.id);
         },
         [onNodeClick]
+        [onNodeClick]
     );
+
+    const downloadImage = useCallback(() => {
+        if (rfInstance && activeSpec) {
+            const nodesBounds = getNodesBounds(nodes);
+            const width = nodesBounds.width;
+            const height = nodesBounds.height;
+            const transform = getViewportForBounds(
+                nodesBounds,
+                width,
+                height,
+                0.5,
+                2,
+                0.2
+            );
+
+            toPng(document.querySelector('.react-flow__viewport') as HTMLElement, {
+                backgroundColor: isDark ? '#0a0f1a' : '#f8fafc',
+                width: width * 2, // higher res
+                height: height * 2,
+                style: {
+                    width: `${width}px`,
+                    height: `${height}px`,
+                    transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`,
+                },
+            }).then((dataUrl) => {
+                const a = document.createElement('a');
+                a.setAttribute('download', 'workflow.png');
+                a.setAttribute('href', dataUrl);
+                a.click();
+            });
+        }
+    }, [rfInstance, nodes, isDark, activeSpec]);
 
     // Empty state
     if (!activeSpec) {
@@ -213,7 +251,9 @@ export function WorkflowCanvas({ spec, previewSpec, onNodeClick, theme = 'dark',
                 edges={edges}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
+                onEdgesChange={onEdgesChange}
                 onNodeClick={handleNodeClick}
+                onNodesDelete={onNodesDelete}
                 nodeTypes={nodeTypes}
                 fitView
                 fitViewOptions={{ padding: 0.2 }}
@@ -251,6 +291,23 @@ export function WorkflowCanvas({ spec, previewSpec, onNodeClick, theme = 'dark',
                             {t.actions.preview}
                         </span>
                     </div>
+                </div>
+            )}
+
+
+            {/* Export Button */}
+            {activeSpec && (
+                <div className="absolute top-5 right-5 z-20">
+                    <button
+                        onClick={downloadImage}
+                        className={`p-2.5 rounded-xl border shadow-lg transition-all ${isDark
+                            ? 'bg-[#0d1424] border-white/[0.06] text-slate-400 hover:text-slate-300 hover:bg-white/[0.04]'
+                            : 'bg-white border-slate-200 text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                            }`}
+                        title={t.actions.export}
+                    >
+                        <DownloadIcon size={18} />
+                    </button>
                 </div>
             )}
         </div>

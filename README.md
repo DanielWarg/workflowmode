@@ -6,6 +6,7 @@ Antigravity är en AI-driven canvas för att skapa visuella arbetsflöden från 
 
 ### Core
 - **AI-kompilering**: Omvandlar naturligt språk till `WorkflowSpec` (JSON).
+- **Meeting Intelligence**: Äkta process-logik för mötesanteckningar (Start -> Beslut -> Action -> Slut).
 - **Patterns**: Använd mallar som `/linear`, `/decision`, `/swimlane` för bästa resultat.
 - **Workflow Mode**: Enkel chatt-interface till vänster, oändlig canvas till höger.
 
@@ -53,6 +54,24 @@ Antigravity är en AI-driven canvas för att skapa visuella arbetsflöden från 
 
 - [Workflow Spec](./docs/workflow-spec.md) - Datamodell
 - [Workflow Patterns](./docs/workflow-patterns/) - Designmönster
+
+## 🗺️ Roadmap & Status
+
+See [projektplan.md](./projektplan.md) for the master plan.
+We are currently executing **The Wedge Strategy**:
+1.  **Phase 1 (Current)**: Meeting Mode (Notes -> Actions).
+2.  **Phase 2**: Refinement & Audit Log.
+3.  **Phase 3**: Enterprise Ecosystem.
+
+## 🧠 Context for AI Agents
+
+If you are an AI taking over this project, read these files in order:
+1.  `README.md` (This file) - Tech stack & Overview.
+2.  `projektplan.md` - Strategic goals and milestones.
+3.  `task.md` (if available) - Current tactical checklist.
+4.  `script.md` - Product Vision & Soul.
+5.  `src/lib/schema.ts` - The source of truth for the Data Model.
+
 
 ## License
 

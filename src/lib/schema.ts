@@ -74,12 +74,24 @@ export const DiffSummarySchema = z.object({
 export type DiffSummary = z.infer<typeof DiffSummarySchema>;
 
 // ============================================
+// AI Intel Schema (New)
+// ============================================
+
+export const AIWorkflowIntelSchema = z.object({
+  decisionCount: z.number(),
+  actionCount: z.number(),
+});
+
+export type AIWorkflowIntel = z.infer<typeof AIWorkflowIntelSchema>;
+
+// ============================================
 // AI Response Schema
 // ============================================
 
 export const AIWorkflowResponseSchema = z.object({
   workflowSpec: WorkflowSpecSchema,
   diffSummary: DiffSummarySchema,
+  intel: AIWorkflowIntelSchema.optional(),
   warnings: z.array(z.string()).optional(),
   assumptions: z.array(z.string()).optional(),
 });

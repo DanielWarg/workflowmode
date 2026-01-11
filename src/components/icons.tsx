@@ -149,6 +149,25 @@ export function RedoIcon({ className = '', size = 16 }: IconProps) {
     );
 }
 
+// Download Icon
+export function DownloadIcon({ className = '', size = 16 }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
+
+// Trash Icon
+export function TrashIcon({ className = '', size = 16 }: IconProps) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
 // Keyboard shortcut badge
 export function KbdBadge({ children, className = '' }: { children: React.ReactNode; className?: string }) {
     return (

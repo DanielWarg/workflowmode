@@ -28,14 +28,20 @@ Vi bygger momentum efter möten genom att omvandla ostrukturerade anteckningar t
     - "Explain-why": Klickbar förklaring på varför noder skapades.
 - [ ] **Export v1**: PNG & Text (Decisions/Actions list).
 
-### � Fas 2: Momentum & Refinement
+### 📍 Fas 2: Momentum & Refinement
 *Mål: Från "Coolt" till "Användbart i arbete".*
 
+- [ ] **Crucial Edit Actions**:
+    - [ ] **Sync Deletions**: Backspace ska ta bort noder i Yjs (inte bara lokalt).
+    - [ ] **Clear Board**: "Börja om" (Nollställ canvas).
+    - [ ] **Regenerate / Re-think**: En "Refresh"-knapp som genererar om flödet med samma prompt (för variation).
+    - [ ] **Iterative Reprompting**: Editera ett tidigare meddelande för att "göra om och göra rätt" (Retry).
 - [ ] **Commit Workflow**: "Apply" låser state och skapar audit-log (Version History).
 - [ ] **Refine Intents**: Knappar för actions ("Assign owners", "Add follow-up").
 - [ ] **Owners & Deadlines**: Rika metadata på noder.
+    - [ ] **Node-specific Prompting**: Möjlighet att "prompta om" en specifik nod via en dialogruta (för finjustering).
 
-### � Fas 3: Ecosystem Expansion
+###  Fas 3: Ecosystem Expansion
 *Mål: Enterprise adoption.*
 
 - [ ] **Share Links**: Viewer/Editor länkar.

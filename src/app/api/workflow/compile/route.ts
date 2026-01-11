@@ -96,6 +96,10 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             workflowSpec: validation.data,
+            intel: {
+                decisionCount: validation.data.nodes.filter(n => n.type === 'decision').length,
+                actionCount: validation.data.nodes.filter(n => n.type === 'step').length,
+            },
             diffSummary: parsed.diffSummary || {
                 added: ['New workflow created'],
                 removed: [],

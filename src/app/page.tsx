@@ -17,8 +17,9 @@ import {
   BotIcon,
   UndoIcon,
   RedoIcon,
+  TrashIcon,
 } from '@/components/icons';
-import type { WorkflowSpec, DiffSummary } from '@/lib/schema';
+import type { WorkflowSpec, DiffSummary, AIWorkflowIntel, Node } from '@/lib/schema';
 import { useYjs } from '@/components/YjsProvider';
 import { syncYjsToSpec, syncSpecToYjs } from '@/lib/yjs-utils';
 import { WORKFLOW_PATTERNS, type WorkflowPattern } from '@/lib/patterns';
@@ -35,6 +36,7 @@ interface Message {
 interface ProposalState {
   spec: WorkflowSpec;
   diffSummary: DiffSummary;
+  intel?: AIWorkflowIntel;
   assumptions?: string[];
 }
 
@@ -183,6 +185,22 @@ export default function Home() {
     }
   }, [workflow]);
 
+  const handleNodesDelete = useCallback((deletedNodes: Node[]) => {
+    if (!workflow || !doc) return;
+    const deletedIds = deletedNodes.map(n => n.id);
+
+    const newNodes = workflow.nodes.filter(n => !deletedIds.includes(n.id));
+    const newEdges = workflow.edges.filter(e => !deletedIds.includes(e.from) && !deletedIds.includes(e.to));
+
+    const newSpec = {
+      ...workflow,
+      nodes: newNodes,
+      edges: newEdges
+    };
+
+    syncSpecToYjs(doc, newSpec);
+  }, [workflow, doc]);
+
   const addMessage = useCallback((role: Message['role'], content: string) => {
     setMessages((prev) => [
       ...prev,
@@ -225,6 +243,7 @@ export default function Home() {
       setProposal({
         spec: data.workflowSpec,
         diffSummary: data.diffSummary,
+        intel: data.intel,
         assumptions: data.assumptions,
       });
       setFitViewTrigger(Date.now());
@@ -253,6 +272,17 @@ export default function Home() {
   const handleDiscard = () => {
     setProposal(null);
     addMessage('system', 'Förslag kasserat');
+  };
+
+  const handleClear = () => {
+    if (confirm(t.actions.discard + '?')) {
+      if (doc) {
+        syncSpecToYjs(doc, { nodes: [], edges: [], lanes: [], metadata: {} });
+        setWorkflow(null);
+        setProposal(null);
+        addMessage('system', 'Canvas rensad.');
+      }
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -398,6 +428,20 @@ export default function Home() {
               <span className={`text-[12px] font-medium ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>
                 {t.actions.preview}
               </span>
+              {proposal.intel && (proposal.intel.decisionCount > 0 || proposal.intel.actionCount > 0) && (
+                <div className={`flex items-center gap-3 ml-2 pl-3 border-l ${isDark ? 'border-amber-500/20' : 'border-amber-200'}`}>
+                  {proposal.intel.decisionCount > 0 && (
+                    <span className={`text-[11px] font-medium flex items-center gap-1 ${isDark ? 'text-amber-300/80' : 'text-amber-800/70'}`}>
+                      <span className="text-amber-400">◆</span> {proposal.intel.decisionCount} Decisions
+                    </span>
+                  )}
+                  {proposal.intel.actionCount > 0 && (
+                    <span className={`text-[11px] font-medium flex items-center gap-1 ${isDark ? 'text-amber-300/80' : 'text-amber-800/70'}`}>
+                      <span className="text-amber-400">⚡️</span> {proposal.intel.actionCount} Actions
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
             <div className="flex gap-2">
               <button
@@ -508,6 +552,7 @@ export default function Home() {
         <WorkflowCanvas
           spec={workflow}
           previewSpec={proposal?.spec}
+          onNodesDelete={handleNodesDelete}
           theme={theme}
           fitViewTrigger={fitViewTrigger}
         />
@@ -546,6 +591,18 @@ export default function Home() {
               title={t.actions.redo}
             >
               <RedoIcon size={14} />
+            </button>
+            <div className={`w-px h-3 mx-0.5 ${isDark ? 'bg-white/10' : 'bg-slate-200'}`} />
+            <button
+              onClick={handleClear}
+              disabled={!workflow}
+              className={`p-1.5 rounded-lg transition-colors ${workflow
+                ? isDark ? 'hover:bg-rose-500/20 text-slate-400 hover:text-rose-400' : 'hover:bg-rose-50 text-slate-400 hover:text-rose-600'
+                : isDark ? 'text-slate-700 cursor-not-allowed' : 'text-slate-300 cursor-not-allowed'
+                }`}
+              title={t.actions.discard}
+            >
+              <TrashIcon size={14} />
             </button>
           </div>
         </div>

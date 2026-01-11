@@ -39,6 +39,7 @@ export const translations = {
             preview: 'Preview changes',
             applied: 'Changes applied and synchronized',
             discarded: 'Proposal discarded',
+            export: 'Export PNG',
         },
     },
     sv: {
@@ -76,9 +77,10 @@ export const translations = {
             discard: 'Avbryt',
             undo: 'Ångra (Cmd+Z)',
             redo: 'Gör om (Cmd+Shift+Z)',
-            preview: 'Förhandsgranska ändringar',
+            preview: 'Granska ändringar',
             applied: 'Ändringar tillämpade och synkroniserade',
             discarded: 'Förslag kasserat',
+            export: 'Exportera PNG',
         },
     },
 };
