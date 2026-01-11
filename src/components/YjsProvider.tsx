@@ -66,12 +66,12 @@ export function YjsProvider({ children }: { children: ReactNode }) {
 
         // Set random identity
         const { name, color } = getRandomIdentity();
-        wsProvider.awareness.setLocalStateField('user', { name, color });
+        wsProvider.awareness?.setLocalStateField('user', { name, color });
 
         setProvider(wsProvider);
         setDoc(yDoc);
         setUndoManager(um);
-        setAwareness(wsProvider.awareness);
+        setAwareness(wsProvider.awareness ?? null);
         setStatus('connecting');
 
         return () => {

@@ -25,7 +25,7 @@ Används när logik och vägval är centralt. Passar för policy-tolkning, godk�
 ```json
 {
   "lanes": [
-    { "id": "hr", "label": "HR-process" }
+    { "id": "hr", "name": "HR-process", "order": 0 }
   ],
   "nodes": [
     { "id": "start", "type": "start", "title": "Ansökan inkom", "laneId": "hr" },
@@ -37,13 +37,13 @@ Används när logik och vägval är centralt. Passar för policy-tolkning, godk�
     { "id": "end_deny", "type": "end", "title": "Avslagen", "laneId": "hr" }
   ],
   "edges": [
-    { "id": "e1", "from": "start", "to": "check_days" },
+    { "id": "e1", "from": "start", "to": "check_days", "type": "normal" },
     { "id": "e2", "from": "check_days", "to": "check_conflict", "label": "Ja", "type": "decision_yes" },
     { "id": "e3", "from": "check_days", "to": "deny", "label": "Nej", "type": "decision_no" },
-    { "id": "e4", "from": "check_conflict", "to": "approve", "label": "Nej", "type": "decision_yes" },
-    { "id": "e5", "from": "check_conflict", "to": "deny", "label": "Ja", "type": "decision_no" },
-    { "id": "e6", "from": "approve", "to": "end_ok" },
-    { "id": "e7", "from": "deny", "to": "end_deny" }
+    { "id": "e4", "from": "check_conflict", "to": "approve", "label": "Nej", "type": "decision_no" },
+    { "id": "e5", "from": "check_conflict", "to": "deny", "label": "Ja", "type": "decision_yes" },
+    { "id": "e6", "from": "approve", "to": "end_ok", "type": "normal" },
+    { "id": "e7", "from": "deny", "to": "end_deny", "type": "normal" }
   ],
   "metadata": {
     "name": "Semestergodkännande",

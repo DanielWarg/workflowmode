@@ -1,5 +1,3 @@
-export type Translations = typeof translations.en;
-
 export const translations = {
     en: {
         app: {
@@ -84,3 +82,6 @@ export const translations = {
         },
     },
 };
+
+export type Language = keyof typeof translations;
+export type Translations = typeof translations.en;

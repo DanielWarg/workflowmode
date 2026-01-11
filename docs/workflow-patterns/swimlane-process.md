@@ -24,9 +24,9 @@ Används när flera roller, avdelningar eller system samverkar. Tydliggör ansva
 ```json
 {
   "lanes": [
-    { "id": "customer", "label": "Kund" },
-    { "id": "l1", "label": "First Line Support" },
-    { "id": "l2", "label": "Second Line Support" }
+    { "id": "customer", "name": "Kund", "order": 0 },
+    { "id": "l1", "name": "First Line Support", "order": 1 },
+    { "id": "l2", "name": "Second Line Support", "order": 2 }
   ],
   "nodes": [
     { "id": "start", "type": "start", "title": "Mejl inkommer", "laneId": "customer" },
@@ -38,13 +38,13 @@ Används när flera roller, avdelningar eller system samverkar. Tydliggör ansva
     { "id": "end", "type": "end", "title": "Ärende stängt", "laneId": "customer" }
   ],
   "edges": [
-    { "id": "e1", "from": "start", "to": "triage" },
-    { "id": "e2", "from": "triage", "to": "complex" },
-    { "id": "e3", "from": "complex", "to": "solve_l1", "label": "Nej", "type": "decision_yes" },
-    { "id": "e4", "from": "complex", "to": "escalate", "label": "Ja", "type": "escalation" },
-    { "id": "e5", "from": "solve_l1", "to": "notify" },
-    { "id": "e6", "from": "escalate", "to": "notify" },
-    { "id": "e7", "from": "notify", "to": "end" }
+    { "id": "e1", "from": "start", "to": "triage", "type": "normal" },
+    { "id": "e2", "from": "triage", "to": "complex", "type": "normal" },
+    { "id": "e3", "from": "complex", "to": "solve_l1", "label": "Nej", "type": "decision_no" },
+    { "id": "e4", "from": "complex", "to": "escalate", "label": "Ja", "type": "decision_yes" },
+    { "id": "e5", "from": "solve_l1", "to": "notify", "type": "normal" },
+    { "id": "e6", "from": "escalate", "to": "notify", "type": "escalation" },
+    { "id": "e7", "from": "notify", "to": "end", "type": "normal" }
   ],
   "metadata": {
     "name": "Support-eskalering",

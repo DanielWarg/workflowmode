@@ -9,6 +9,13 @@ interface User {
     color: string;
 }
 
+type AwarenessState = {
+    user?: {
+        name?: string;
+        color?: string;
+    };
+};
+
 export function UserAvatars() {
     const { awareness } = useYjs();
     const [users, setUsers] = useState<User[]>([]);
@@ -17,15 +24,17 @@ export function UserAvatars() {
         if (!awareness) return;
 
         const updateUsers = () => {
-            const states = awareness.getStates();
+            const states = awareness.getStates() as Map<number, AwarenessState>;
             const activeUsers: User[] = [];
 
-            states.forEach((state: any, clientId: number) => {
-                if (state.user) {
+            states.forEach((state, clientId) => {
+                const name = state.user?.name;
+                const color = state.user?.color;
+                if (name && color) {
                     activeUsers.push({
                         clientId,
-                        name: state.user.name,
-                        color: state.user.color,
+                        name,
+                        color,
                     });
                 }
             });

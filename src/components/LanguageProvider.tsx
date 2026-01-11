@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode } from 'react';
 import { translations, Language, Translations } from '@/lib/i18n/translations';
 
 interface LanguageContextType {
@@ -12,21 +12,17 @@ interface LanguageContextType {
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-    const [language, setLanguage] = useState<Language>('en');
-    const [mounted, setMounted] = useState(false);
-
-    // Persist language choice
-    useEffect(() => {
-        const saved = localStorage.getItem('antigravity-lang') as Language;
-        if (saved && (saved === 'en' || saved === 'sv')) {
-            setLanguage(saved);
-        }
-        setMounted(true);
-    }, []);
+    const [language, setLanguage] = useState<Language>(() => {
+        if (typeof window === 'undefined') return 'sv';
+        const saved = localStorage.getItem('antigravity-lang');
+        return saved === 'en' || saved === 'sv' ? saved : 'sv';
+    });
 
     const handleSetLanguage = (lang: Language) => {
         setLanguage(lang);
-        localStorage.setItem('antigravity-lang', lang);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('antigravity-lang', lang);
+        }
     };
 
 

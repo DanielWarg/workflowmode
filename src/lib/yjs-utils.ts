@@ -5,7 +5,7 @@ export function syncYjsToSpec(doc: Y.Doc): WorkflowSpec | null {
     const nodesMap = doc.getMap<Node>('nodes');
     const edgesMap = doc.getMap<Edge>('edges');
     const lanesArray = doc.getArray<Lane>('lanes');
-    const metadataMap = doc.getMap<any>('metadata');
+    const metadataMap = doc.getMap<unknown>('metadata');
 
     // Om dokumentet är tomt, returnera null
     if (nodesMap.size === 0 && lanesArray.length === 0) {
@@ -16,7 +16,7 @@ export function syncYjsToSpec(doc: Y.Doc): WorkflowSpec | null {
         nodes: Array.from(nodesMap.values()),
         edges: Array.from(edgesMap.values()),
         lanes: lanesArray.toArray(),
-        metadata: metadataMap.toJSON() as any,
+        metadata: metadataMap.toJSON() as WorkflowSpec['metadata'],
     };
 }
 

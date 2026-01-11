@@ -26,7 +26,7 @@ När användaren ber om en linjär process:
 ```json
 {
   "lanes": [
-    { "id": "main", "label": "Publiceringsflöde" }
+    { "id": "main", "name": "Publiceringsflöde", "order": 0 }
   ],
   "nodes": [
     { "id": "start", "type": "start", "title": "Start", "laneId": "main" },
@@ -37,11 +37,11 @@ När användaren ber om en linjär process:
     { "id": "end", "type": "end", "title": "Klar", "laneId": "main" }
   ],
   "edges": [
-    { "id": "e1", "from": "start", "to": "step1" },
-    { "id": "e2", "from": "step1", "to": "step2" },
-    { "id": "e3", "from": "step2", "to": "step3" },
-    { "id": "e4", "from": "step3", "to": "step4" },
-    { "id": "e5", "from": "step4", "to": "end" }
+    { "id": "e1", "from": "start", "to": "step1", "type": "normal" },
+    { "id": "e2", "from": "step1", "to": "step2", "type": "normal" },
+    { "id": "e3", "from": "step2", "to": "step3", "type": "normal" },
+    { "id": "e4", "from": "step3", "to": "step4", "type": "normal" },
+    { "id": "e5", "from": "step4", "to": "end", "type": "normal" }
   ],
   "metadata": {
     "name": "Bloggpublicering",

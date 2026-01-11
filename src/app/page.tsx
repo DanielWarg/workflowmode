@@ -19,6 +19,7 @@ import {
   RedoIcon,
   TrashIcon,
 } from '@/components/icons';
+import type { Node as ReactFlowNode } from '@xyflow/react';
 import type { WorkflowSpec, DiffSummary, AIWorkflowIntel, Node } from '@/lib/schema';
 import { useYjs } from '@/components/YjsProvider';
 import { syncYjsToSpec, syncSpecToYjs } from '@/lib/yjs-utils';
@@ -185,7 +186,7 @@ export default function Home() {
     }
   }, [workflow]);
 
-  const handleNodesDelete = useCallback((deletedNodes: Node[]) => {
+  const handleNodesDelete = useCallback((deletedNodes: ReactFlowNode[]) => {
     if (!workflow || !doc) return;
     const deletedIds = deletedNodes.map(n => n.id);
 
@@ -277,7 +278,7 @@ export default function Home() {
   const handleClear = () => {
     if (confirm(t.actions.discard + '?')) {
       if (doc) {
-        syncSpecToYjs(doc, { nodes: [], edges: [], lanes: [], metadata: {} });
+        syncSpecToYjs(doc, { nodes: [], edges: [], lanes: [], metadata: { language: 'sv', version: 1 } });
         setWorkflow(null);
         setProposal(null);
         addMessage('system', 'Canvas rensad.');

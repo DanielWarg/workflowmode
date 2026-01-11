@@ -19,7 +19,7 @@ interface NodeData {
 // ============================================
 
 export function StartNode({ data }: NodeProps) {
-    const nodeData = data as NodeData;
+    const nodeData = data as unknown as NodeData;
     return (
         <div className="group relative">
             <div className="absolute inset-0 bg-emerald-500/20 rounded-2xl blur-xl transition-opacity opacity-0 group-hover:opacity-100" />
@@ -48,7 +48,7 @@ export function StartNode({ data }: NodeProps) {
 // ============================================
 
 export function EndNode({ data }: NodeProps) {
-    const nodeData = data as NodeData;
+    const nodeData = data as unknown as NodeData;
     return (
         <div className="group relative">
             <div className="absolute inset-0 bg-rose-500/20 rounded-2xl blur-xl transition-opacity opacity-0 group-hover:opacity-100" />
@@ -77,9 +77,9 @@ export function EndNode({ data }: NodeProps) {
 // ============================================
 
 export function StepNode({ data }: NodeProps) {
-    const nodeData = data as NodeData;
-    const isEscalation = nodeData.metadata?.isEscalation;
-    const isException = nodeData.metadata?.isException;
+    const nodeData = data as unknown as NodeData;
+    const isEscalation = nodeData.metadata?.isEscalation === true;
+    const isException = nodeData.metadata?.isException === true;
 
     const colorClasses = isEscalation
         ? 'from-orange-500 to-amber-500 border-orange-400/30 shadow-orange-500/20 hover:shadow-orange-500/30'
@@ -124,7 +124,7 @@ export function StepNode({ data }: NodeProps) {
 // ============================================
 
 export function DecisionNode({ data }: NodeProps) {
-    const nodeData = data as NodeData;
+    const nodeData = data as unknown as NodeData;
     return (
         <div className="group relative">
             <div className="absolute inset-0 bg-amber-500/20 rounded-2xl blur-xl transition-opacity opacity-0 group-hover:opacity-100" />

@@ -138,7 +138,6 @@ function LaneBackground({ lanes, height, isDark }: LaneBackgroundProps) {
 interface WorkflowCanvasProps {
     spec: WorkflowSpec | null;
     previewSpec?: WorkflowSpec | null;
-    previewSpec?: WorkflowSpec | null;
     onNodeClick?: (nodeId: string) => void;
     onNodesDelete?: (deletedNodes: Node[]) => void;
     theme?: 'dark' | 'light';
@@ -183,7 +182,6 @@ export function WorkflowCanvas({ spec, previewSpec, onNodeClick, onNodesDelete, 
         (_: React.MouseEvent, node: Node) => {
             onNodeClick?.(node.id);
         },
-        [onNodeClick]
         [onNodeClick]
     );
 
@@ -250,7 +248,6 @@ export function WorkflowCanvas({ spec, previewSpec, onNodeClick, onNodesDelete, 
                 nodes={nodes}
                 edges={edges}
                 onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
                 onEdgesChange={onEdgesChange}
                 onNodeClick={handleNodeClick}
                 onNodesDelete={onNodesDelete}

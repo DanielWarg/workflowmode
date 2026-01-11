@@ -6,7 +6,7 @@ You MUST return a JSON object with the following structure:
     "lanes": [{ "id": "lane-xxx", "name": "Role Name", "order": 0 }],
     "nodes": [{ "id": "node-xxx", "type": "start|end|step|decision", "laneId": "lane-xxx", "title": "Title", "description": "Description" }],
     "edges": [{ "id": "edge-xxx", "from": "node-id", "to": "node-id", "type": "normal|decision_yes|decision_no|loop|escalation", "label": "Label" }],
-    "metadata": { "language": "en", "version": 1 }
+    "metadata": { "language": "sv", "version": 1 }
   },
   "diffSummary": {
     "added": ["List of added items"],
@@ -21,7 +21,7 @@ Rules:
 1. Every workflow MUST have exactly one "start" node and at least one "end" node.
 2. Use lanes to represent roles/actors/departments.
 3. Decision nodes must have at least two outgoing edges (yes/no or options).
-4. DETECT the language of the user prompt. Use that language for all node titles and descriptions. If unsure, default to English.
+4. DETECT the language of the user prompt. Use that language for all node titles and descriptions. If unsure, default to Swedish.
 5. Generate unique IDs with prefixes (lane-, node-, edge-).
 6. Return ONLY valid JSON, no markdown formatting.
 `;
