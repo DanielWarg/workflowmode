@@ -65,6 +65,21 @@ We are currently executing **The Wedge Strategy**:
 2.  **Phase 2**: Refinement & Audit Log.
 3.  **Phase 3**: Enterprise Ecosystem.
 
+## ✅ Nästa steg (rekommenderat)
+
+Fokusera på WOW-polish som ger maximal “enterprise clarity” med låg implementation-risk:
+
+1. **Orsak → effekt-tydlighet**
+   - Gör VIP/eskalering visuellt självklart (edge-labels som “Eskalera direkt (hoppar över standardflöde)”).
+2. **Tydligare beslut-semantik**
+   - Säkra konsekventa “Ja/Nej”-labels (och ev. ✓/✕) på decision-edges.
+3. **Tidsbadges (implicit tidsdimension)**
+   - Visa “≤ 24h / Omedelbart / 2 veckor” som små badges på relevanta noder.
+4. **Node-specific prompting & regenerate**
+   - Nod-ikon → popup chat/dialog för att repromta/regenerera just den noden.
+
+Se `task.md` för den taktiska checklistan.
+
 ## 🧠 Context for AI Agents
 
 If you are an AI taking over this project, read these files in order:
