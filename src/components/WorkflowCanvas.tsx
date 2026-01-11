@@ -1,0 +1,245 @@
+'use client';
+
+import { useCallback, useMemo, useEffect } from 'react';
+import {
+    ReactFlow,
+    Background,
+    Controls,
+    MiniMap,
+    Node,
+    Edge,
+    NodeTypes,
+    BackgroundVariant,
+    useNodesState,
+    useEdgesState,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+
+import type { WorkflowSpec, Node as WFNode, Lane } from '@/lib/schema';
+import { StartNode, EndNode, StepNode, DecisionNode } from './nodes';
+import { WorkflowIcon } from './icons';
+
+// ============================================
+// Constants
+// ============================================
+
+const LANE_WIDTH = 280;
+const NODE_Y_SPACING = 140;
+const NODE_X_OFFSET = 80;
+
+// ============================================
+// Transform WorkflowSpec to React Flow
+// ============================================
+
+function calculateNodePosition(
+    node: WFNode,
+    lanes: Lane[],
+    nodeIndex: number
+): { x: number; y: number } {
+    const lane = lanes.find((l) => l.id === node.laneId);
+    const laneOrder = lane?.order ?? 0;
+
+    return {
+        x: laneOrder * LANE_WIDTH + NODE_X_OFFSET,
+        y: (nodeIndex + 1) * NODE_Y_SPACING,
+    };
+}
+
+function transformToReactFlow(spec: WorkflowSpec, isDark: boolean): { nodes: Node[]; edges: Edge[] } {
+    const nodes: Node[] = spec.nodes.map((node, index) => ({
+        id: node.id,
+        type: node.type,
+        position: calculateNodePosition(node, spec.lanes, index),
+        data: {
+            label: node.title,
+            description: node.description,
+            laneId: node.laneId,
+            metadata: node.metadata,
+            isDark,
+        },
+    }));
+
+    const edges: Edge[] = spec.edges.map((edge) => ({
+        id: edge.id,
+        source: edge.from,
+        target: edge.to,
+        label: edge.label,
+        type: 'smoothstep',
+        animated: edge.type === 'escalation',
+        style: {
+            stroke: edge.type === 'escalation' ? '#f43f5e' :
+                edge.type === 'decision_yes' ? '#10b981' :
+                    edge.type === 'decision_no' ? '#f43f5e' : isDark ? '#475569' : '#94a3b8',
+            strokeWidth: 2,
+        },
+        labelStyle: {
+            fill: isDark ? '#94a3b8' : '#475569',
+            fontWeight: 500,
+            fontSize: 11,
+        },
+        labelBgStyle: {
+            fill: isDark ? '#1e293b' : '#ffffff',
+            fillOpacity: 0.95,
+        },
+        labelBgPadding: [6, 4] as [number, number],
+        labelBgBorderRadius: 6,
+    }));
+
+    return { nodes, edges };
+}
+
+// ============================================
+// Lane Background
+// ============================================
+
+interface LaneBackgroundProps {
+    lanes: Lane[];
+    height: number;
+    isDark: boolean;
+}
+
+function LaneBackground({ lanes, height, isDark }: LaneBackgroundProps) {
+    const sortedLanes = [...lanes].sort((a, b) => a.order - b.order);
+
+    return (
+        <div className="absolute inset-0 pointer-events-none flex">
+            {sortedLanes.map((lane, index) => (
+                <div
+                    key={lane.id}
+                    className={`flex flex-col ${isDark ? 'border-r border-white/[0.04]' : 'border-r border-slate-200/60'}`}
+                    style={{ width: LANE_WIDTH, minHeight: height }}
+                >
+                    <div className={`sticky top-0 z-10 px-4 py-3 ${isDark ? 'bg-[#0a0f1a]/95 backdrop-blur-sm border-b border-white/[0.04]' : 'bg-slate-50/95 backdrop-blur-sm border-b border-slate-200/60'}`}>
+                        <span className={`text-[11px] font-semibold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                            {lane.name}
+                        </span>
+                    </div>
+                    <div
+                        className={`flex-1 ${index % 2 === 0
+                            ? isDark ? 'bg-white/[0.01]' : 'bg-slate-50/30'
+                            : isDark ? 'bg-transparent' : 'bg-white/50'
+                            }`}
+                    />
+                </div>
+            ))}
+        </div>
+    );
+}
+
+// ============================================
+// WorkflowCanvas Component
+// ============================================
+
+interface WorkflowCanvasProps {
+    spec: WorkflowSpec | null;
+    previewSpec?: WorkflowSpec | null;
+    onNodeClick?: (nodeId: string) => void;
+    theme?: 'dark' | 'light';
+}
+
+const nodeTypes: NodeTypes = {
+    start: StartNode,
+    end: EndNode,
+    step: StepNode,
+    decision: DecisionNode,
+};
+
+export function WorkflowCanvas({ spec, previewSpec, onNodeClick, theme = 'dark' }: WorkflowCanvasProps) {
+    const isDark = theme === 'dark';
+    const activeSpec = previewSpec ?? spec;
+
+    const { nodes: transformedNodes, edges: transformedEdges } = useMemo(() => {
+        if (!activeSpec) return { nodes: [], edges: [] };
+        return transformToReactFlow(activeSpec, isDark);
+    }, [activeSpec, isDark]);
+
+    const [nodes, setNodes, onNodesChange] = useNodesState(transformedNodes);
+    const [edges, setEdges, onEdgesChange] = useEdgesState(transformedEdges);
+
+    // Sync nodes and edges when spec changes
+    useEffect(() => {
+        setNodes(transformedNodes);
+        setEdges(transformedEdges);
+    }, [transformedNodes, transformedEdges, setNodes, setEdges]);
+
+    const handleNodeClick = useCallback(
+        (_: React.MouseEvent, node: Node) => {
+            onNodeClick?.(node.id);
+        },
+        [onNodeClick]
+    );
+
+    // Empty state
+    if (!activeSpec) {
+        return (
+            <div className={`h-full w-full flex items-center justify-center ${isDark ? 'bg-[#0a0f1a]' : 'bg-slate-50'}`}>
+                <div className="text-center space-y-6 max-w-sm px-8">
+                    <div className={`w-20 h-20 mx-auto rounded-3xl flex items-center justify-center ${isDark ? 'bg-white/[0.03] border border-white/[0.06]' : 'bg-white border border-slate-200'}`}>
+                        <WorkflowIcon className={isDark ? 'text-slate-600' : 'text-slate-400'} size={32} />
+                    </div>
+                    <div className="space-y-2">
+                        <h3 className={`text-lg font-semibold ${isDark ? 'text-slate-300' : 'text-slate-800'}`}>
+                            Inget workflow ännu
+                        </h3>
+                        <p className={`text-[13px] leading-relaxed ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                            Skriv en prompt i sidopanelen för att generera ett visuellt workflow
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    const canvasHeight = Math.max(700, (activeSpec.nodes.length + 2) * NODE_Y_SPACING);
+
+    return (
+        <div className={`h-full w-full relative ${isDark ? 'bg-[#0a0f1a]' : 'bg-slate-50'}`}>
+            <LaneBackground lanes={activeSpec.lanes} height={canvasHeight} isDark={isDark} />
+            <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onNodeClick={handleNodeClick}
+                nodeTypes={nodeTypes}
+                fitView
+                fitViewOptions={{ padding: 0.2 }}
+                proOptions={{ hideAttribution: true }}
+                className="bg-transparent"
+            >
+                <Background
+                    variant={BackgroundVariant.Dots}
+                    gap={24}
+                    size={1}
+                    color={isDark ? '#1e293b' : '#e2e8f0'}
+                />
+                <Controls
+                    showInteractive={false}
+                    className={`!rounded-xl !shadow-lg ${isDark
+                        ? '!bg-[#0d1424] !border !border-white/[0.06] [&>button]:!bg-transparent [&>button]:!border-0 [&>button]:!border-b [&>button]:!border-white/[0.06] [&>button:last-child]:!border-0 [&>button]:!text-slate-400 [&>button:hover]:!bg-white/[0.04] [&>button:hover]:!text-slate-300'
+                        : '!bg-white !border !border-slate-200 [&>button]:!bg-transparent [&>button]:!border-0 [&>button]:!border-b [&>button]:!border-slate-100 [&>button:last-child]:!border-0 [&>button]:!text-slate-500 [&>button:hover]:!bg-slate-50 [&>button:hover]:!text-slate-700'
+                        }`}
+                />
+                <MiniMap
+                    className={`!rounded-xl !shadow-lg ${isDark ? '!bg-[#0d1424] !border !border-white/[0.06]' : '!bg-white !border !border-slate-200'}`}
+                    nodeColor="#14b8a6"
+                    maskColor={isDark ? 'rgba(10, 15, 26, 0.85)' : 'rgba(248, 250, 252, 0.85)'}
+                    pannable
+                    zoomable
+                />
+            </ReactFlow>
+
+            {/* Preview indicator */}
+            {previewSpec && (
+                <div className="absolute top-5 left-1/2 -translate-x-1/2 z-20">
+                    <div className={`flex items-center gap-2.5 px-4 py-2 rounded-full shadow-lg ${isDark ? 'bg-amber-500/10 border border-amber-400/20 backdrop-blur-sm' : 'bg-amber-50 border border-amber-200'}`}>
+                        <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                        <span className={`text-[12px] font-medium ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>
+                            Förhandsgranskning
+                        </span>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
