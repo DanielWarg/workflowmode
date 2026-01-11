@@ -35,3 +35,8 @@ html {
   overflow: hidden;
   overscroll-behavior: none;
 }
+
+/* Prevent tiny layout shifts when scrollbars appear/disappear */
+* {
+  scrollbar-gutter: stable;
+}

@@ -16,6 +16,11 @@
 - **Determinism** (stabil output och idempotent apply)
 - **AI är optional** (editorn ska fungera även utan AI)
 
+## UX-principer (V1)
+
+- **Navigator: list ↔ flow**: “Åtgärder/Öppna frågor/Uppföljning” fungerar som navigationslager (klick → zoom/highlight nod).
+- **Fit-to-view**: Vid generering ska hela workflowet synas direkt (ingen manuell zoom för att “hitta flödet”).
+
 ## Non-goals (V1)
 
 - Full Miro-paritet

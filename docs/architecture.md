@@ -19,6 +19,7 @@ Antigravity består av:
    - `workflowSpec` (validerad mot `src/lib/schema.ts`)
    - `diffSummary` (+ ev. `assumptions`/`warnings`)
 4. Klienten renderar resultatet som **preview** (ghost).
+   - UI har ett “Navigator”-lager (listor) som kan fokusera/markera en specifik nod i canvasen.
 5. Vid **Apply** skrivs committed state (och synkas i realtime).
 
 ## Realtime

@@ -28,6 +28,22 @@ Vi bygger momentum efter möten genom att omvandla ostrukturerade anteckningar t
     - "Explain-why": Klickbar förklaring på varför noder skapades.
 - [ ] **Export v1**: PNG & Text (Decisions/Actions list).
 
+#### ✨ WOW-Polish (det som tar “riktigt bra” → “holy sh*t”)
+*Prioriterat enligt produkt-/kundkritisk feedback. Detta är små grejer med stor effekt.*
+
+- [ ] **Lås Meeting-pattern som default output**
+  - Meeting paste ska reproducera “Start → Process → Decision → Branch → End” 10/10 gånger.
+- [ ] **Orsak → effekt-tydlighet i flödet**
+  - Ex: VIP-branch ska tydligt visa “hoppar över standardkö/standardflöde”.
+  - Förslag: edge-labels som “Eskalera direkt (hoppar över standardhantering)”.
+- [x] **Koppla listan ↔ flödet (navigationslager)**
+  - Klick på action/open question i vänsterspalten → highlight/zoom till relevant nod.
+  - Målet: Cursor/Lovable-känsla.
+- [ ] **Tydligare beslut-semantik**
+  - Edge-labels “Ja/Nej” (och ev. ✓/✕) ska vara konsekventa och läsbara för icke-tekniska användare.
+- [ ] **Tidsbadges (implicit tidsdimension)**
+  - Små badges per nod: “≤ 24h”, “Omedelbart”, “2 veckor” (inte Gantt, bara hints).
+
 ### 📍 Fas 2: Momentum & Refinement
 *Mål: Från "Coolt" till "Användbart i arbete".*
 
@@ -40,6 +56,8 @@ Vi bygger momentum efter möten genom att omvandla ostrukturerade anteckningar t
 - [ ] **Refine Intents**: Knappar för actions ("Assign owners", "Add follow-up").
 - [ ] **Owners & Deadlines**: Rika metadata på noder.
     - [ ] **Node-specific Prompting**: Möjlighet att "prompta om" en specifik nod via en dialogruta (för finjustering).
+    - [ ] **Node-specific Regenerate (Refresh)**: Klicka på en nod → “refresh/regenerate” just den noden (AI gör om den), utan att regenerera hela flödet.
+      - UI-idé: liten ikon på noden (✨/↻) som öppnar dialog (samma nod-prompt UI kan ha “Regenerate”-knapp).
 
 ###  Fas 3: Ecosystem Expansion
 *Mål: Enterprise adoption.*

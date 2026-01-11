@@ -93,6 +93,36 @@ function transformToReactFlow(spec: WorkflowSpec, isDark: boolean): { nodes: Nod
     return { nodes, edges };
 }
 
+function createFitBoundsNodes(lanes: Lane[], nodeCount: number): Node[] {
+    const maxOrder = lanes.reduce((acc, lane) => Math.max(acc, lane.order), 0);
+    const totalWidth = Math.max(LANE_WIDTH, (maxOrder + 1) * LANE_WIDTH);
+    const totalHeight = Math.max(700, (nodeCount + 2) * NODE_Y_SPACING);
+
+    const base: Omit<Node, 'id' | 'position'> = {
+        type: 'default',
+        data: {},
+        draggable: false,
+        selectable: false,
+        connectable: false,
+        deletable: false,
+        focusable: false,
+        style: {
+            width: 1,
+            height: 1,
+            opacity: 0,
+            border: 'none',
+            background: 'transparent',
+        },
+    };
+
+    return [
+        { id: '__fit-tl', position: { x: 0, y: 0 }, ...base },
+        { id: '__fit-tr', position: { x: totalWidth, y: 0 }, ...base },
+        { id: '__fit-bl', position: { x: 0, y: totalHeight }, ...base },
+        { id: '__fit-br', position: { x: totalWidth, y: totalHeight }, ...base },
+    ];
+}
+
 // ============================================
 // Lane Background
 // ============================================
@@ -138,6 +168,7 @@ function LaneBackground({ lanes, height, isDark }: LaneBackgroundProps) {
 interface WorkflowCanvasProps {
     spec: WorkflowSpec | null;
     previewSpec?: WorkflowSpec | null;
+    focusedNodeId?: string | null;
     onNodeClick?: (nodeId: string) => void;
     onNodesDelete?: (deletedNodes: Node[]) => void;
     theme?: 'dark' | 'light';
@@ -151,7 +182,7 @@ const nodeTypes: NodeTypes = {
     decision: DecisionNode,
 };
 
-export function WorkflowCanvas({ spec, previewSpec, onNodeClick, onNodesDelete, theme = 'dark', fitViewTrigger }: WorkflowCanvasProps) {
+export function WorkflowCanvas({ spec, previewSpec, focusedNodeId, onNodeClick, onNodesDelete, theme = 'dark', fitViewTrigger }: WorkflowCanvasProps) {
     const isDark = theme === 'dark';
     const activeSpec = previewSpec ?? spec;
     const { t } = useLanguage();
@@ -159,7 +190,9 @@ export function WorkflowCanvas({ spec, previewSpec, onNodeClick, onNodesDelete, 
 
     const { nodes: transformedNodes, edges: transformedEdges } = useMemo(() => {
         if (!activeSpec) return { nodes: [], edges: [] };
-        return transformToReactFlow(activeSpec, isDark);
+        const base = transformToReactFlow(activeSpec, isDark);
+        const fitNodes = createFitBoundsNodes(activeSpec.lanes, activeSpec.nodes.length);
+        return { nodes: [...base.nodes, ...fitNodes], edges: base.edges };
     }, [activeSpec, isDark]);
 
     const [nodes, setNodes, onNodesChange] = useNodesState(transformedNodes);
@@ -167,16 +200,36 @@ export function WorkflowCanvas({ spec, previewSpec, onNodeClick, onNodesDelete, 
 
     // Sync nodes and edges when spec changes
     useEffect(() => {
-        setNodes(transformedNodes);
+        const nextNodes = (focusedNodeId
+            ? transformedNodes.map((n) => ({ ...n, selected: n.id === focusedNodeId }))
+            : transformedNodes);
+
+        setNodes(nextNodes);
         setEdges(transformedEdges);
-    }, [transformedNodes, transformedEdges, setNodes, setEdges]);
+    }, [transformedNodes, transformedEdges, setNodes, setEdges, focusedNodeId]);
 
     // Handle camera focus trigger
     useEffect(() => {
-        if (fitViewTrigger && rfInstance) {
-            rfInstance.fitView({ padding: 0.2, duration: 800 });
-        }
-    }, [fitViewTrigger, rfInstance]);
+        if (!fitViewTrigger) return;
+        if (!rfInstance) return;
+        if (transformedNodes.length === 0) return;
+
+        // Ensure nodes are rendered before fitting view
+        requestAnimationFrame(() => {
+            rfInstance.fitView({ nodes: transformedNodes, padding: 0.28, duration: 800 });
+        });
+    }, [fitViewTrigger, rfInstance, transformedNodes]);
+
+    // Focus/highlight a specific node (list ↔ canvas)
+    useEffect(() => {
+        if (!focusedNodeId) return;
+        if (!rfInstance) return;
+
+        const nodeToFocus = transformedNodes.find((n) => n.id === focusedNodeId);
+        if (!nodeToFocus) return;
+
+        rfInstance.fitView({ nodes: [nodeToFocus], padding: 0.35, duration: 700 });
+    }, [focusedNodeId, rfInstance, transformedNodes]);
 
     const handleNodeClick = useCallback(
         (_: React.MouseEvent, node: Node) => {
@@ -253,7 +306,9 @@ export function WorkflowCanvas({ spec, previewSpec, onNodeClick, onNodesDelete, 
                 onNodesDelete={onNodesDelete}
                 nodeTypes={nodeTypes}
                 fitView
-                fitViewOptions={{ padding: 0.2 }}
+                fitViewOptions={{ padding: 0.28 }}
+                minZoom={0.05}
+                maxZoom={4}
                 proOptions={{ hideAttribution: true }}
                 className="bg-transparent"
             >
@@ -265,6 +320,8 @@ export function WorkflowCanvas({ spec, previewSpec, onNodeClick, onNodesDelete, 
                 />
                 <Controls
                     showInteractive={false}
+                    position="top-left"
+                    style={{ top: 76 }}
                     className={`!rounded-xl !shadow-lg ${isDark
                         ? '!bg-[#0d1424] !border !border-white/[0.06] [&>button]:!bg-transparent [&>button]:!border-0 [&>button]:!border-b [&>button]:!border-white/[0.06] [&>button:last-child]:!border-0 [&>button]:!text-slate-400 [&>button:hover]:!bg-white/[0.04] [&>button:hover]:!text-slate-300'
                         : '!bg-white !border !border-slate-200 [&>button]:!bg-transparent [&>button]:!border-0 [&>button]:!border-b [&>button]:!border-slate-100 [&>button:last-child]:!border-0 [&>button]:!text-slate-500 [&>button:hover]:!bg-slate-50 [&>button:hover]:!text-slate-700'

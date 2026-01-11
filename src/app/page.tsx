@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { WorkflowCanvas } from '@/components/WorkflowCanvas';
 import { useTheme } from '@/lib/theme';
 import {
@@ -20,7 +20,7 @@ import {
   TrashIcon,
 } from '@/components/icons';
 import type { Node as ReactFlowNode } from '@xyflow/react';
-import type { WorkflowSpec, DiffSummary, AIWorkflowIntel, Node } from '@/lib/schema';
+import type { WorkflowSpec, DiffSummary, AIWorkflowIntel } from '@/lib/schema';
 import { useYjs } from '@/components/YjsProvider';
 import { syncYjsToSpec, syncSpecToYjs } from '@/lib/yjs-utils';
 import { WORKFLOW_PATTERNS, type WorkflowPattern } from '@/lib/patterns';
@@ -56,6 +56,27 @@ export default function Home() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [activePatternId, setActivePatternId] = useState<string | null>(null);
   const [fitViewTrigger, setFitViewTrigger] = useState(0);
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
+
+  const [workflow, setWorkflow] = useState<WorkflowSpec | null>(null);
+  const [proposal, setProposal] = useState<ProposalState | null>(null);
+
+  const navigatorSpec = proposal?.spec ?? workflow;
+  const navigator = useMemo(() => {
+    if (!navigatorSpec) return null;
+
+    const actions = navigatorSpec.nodes.filter((n) => n.type === 'step');
+    const questions = navigatorSpec.nodes.filter((n) => n.type === 'decision');
+
+    const followUpRegex = /(\b\d+\s*(h|tim|timmar|d|dag|dagar|veck|vecka|veckor)\b|\bomedelbart\b|\buppfölj|\bfollow[- ]?up\b)/i;
+    const followUps = navigatorSpec.nodes.filter((n) => {
+      if (n.type !== 'step') return false;
+      const text = `${n.title}\n${n.description ?? ''}`;
+      return followUpRegex.test(text);
+    });
+
+    return { actions, questions, followUps };
+  }, [navigatorSpec]);
 
   const filteredPatterns = WORKFLOW_PATTERNS.filter(p =>
     p.command.toLowerCase().startsWith(commandFilter.toLowerCase()) ||
@@ -115,9 +136,6 @@ export default function Home() {
       return prev;
     });
   }, [t.chat.welcome]);
-
-  const [workflow, setWorkflow] = useState<WorkflowSpec | null>(null);
-  const [proposal, setProposal] = useState<ProposalState | null>(null);
 
   const isDark = theme === 'dark';
 
@@ -267,11 +285,13 @@ export default function Home() {
     if (!proposal || !doc) return;
     syncSpecToYjs(doc, proposal.spec);
     setProposal(null);
+    setFocusedNodeId(null);
     addMessage('system', 'Ändringar tillämpade och synkroniserade');
   };
 
   const handleDiscard = () => {
     setProposal(null);
+    setFocusedNodeId(null);
     addMessage('system', 'Förslag kasserat');
   };
 
@@ -281,6 +301,7 @@ export default function Home() {
         syncSpecToYjs(doc, { nodes: [], edges: [], lanes: [], metadata: { language: 'sv', version: 1 } });
         setWorkflow(null);
         setProposal(null);
+        setFocusedNodeId(null);
         addMessage('system', 'Canvas rensad.');
       }
     }
@@ -347,12 +368,12 @@ export default function Home() {
             </div>
           </div>
 
-          {workflow && (
+          {navigatorSpec && (
             <div className="flex items-center gap-2 animate-in fade-in duration-500">
               <UserAvatars />
               <button
                 onClick={() => setLanguage(language === 'en' ? 'sv' : 'en')}
-                className={`px-2 py-1 text-[11px] font-medium rounded-lg transition-all ${isDark
+                className={`w-10 text-center px-2 py-1 text-[11px] font-medium rounded-lg transition-all ${isDark
                   ? 'hover:bg-white/[0.04] text-slate-400 hover:text-slate-300'
                   : 'hover:bg-slate-100 text-slate-500 hover:text-slate-700'
                   }`}
@@ -374,8 +395,82 @@ export default function Home() {
         </header>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-scroll">
           <div className="p-5 space-y-4">
+            {/* Navigator: list ↔ flow */}
+            {navigator && (
+              <div className={`mb-1 p-4 rounded-2xl ${isDark ? 'bg-white/[0.03] border border-white/[0.06]' : 'bg-white border border-slate-200 shadow-sm'}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className={`text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                    {t.navigator.title}
+                  </div>
+                  {focusedNodeId && (
+                    <button
+                      type="button"
+                      onClick={() => setFocusedNodeId(null)}
+                      className={`text-[11px] font-medium ${isDark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                      {t.navigator.clear}
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                  {[
+                    { key: 'actions', title: t.navigator.actions, items: navigator.actions },
+                    { key: 'questions', title: t.navigator.questions, items: navigator.questions },
+                    { key: 'followUps', title: t.navigator.followUps, items: navigator.followUps },
+                  ].map((section) => (
+                    <div key={section.key}>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className={`text-[12px] font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                          {section.title}
+                        </div>
+                        <div className={`text-[11px] font-medium ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                          {section.items.length}
+                        </div>
+                      </div>
+
+                      {section.items.length === 0 ? (
+                        <div className={`text-[12px] ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
+                          {t.navigator.empty}
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          {section.items.slice(0, 6).map((n) => (
+                            <button
+                              key={n.id}
+                              type="button"
+                              onClick={() => setFocusedNodeId(n.id)}
+                              className={`w-full text-left px-3 py-2 rounded-xl transition-colors ${focusedNodeId === n.id
+                                ? isDark ? 'bg-teal-500/10 border border-teal-500/20 text-teal-200' : 'bg-teal-50 border border-teal-200 text-teal-900'
+                                : isDark ? 'bg-white/[0.02] hover:bg-white/[0.04] text-slate-300 border border-transparent' : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-transparent'
+                                }`}
+                              title={n.description ?? n.title}
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-[12px] font-medium truncate">{n.title}</span>
+                                {n.metadata?.assignee && (
+                                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${isDark ? 'bg-white/[0.06] text-slate-300' : 'bg-white text-slate-600 border border-slate-200'}`}>
+                                    {String(n.metadata.assignee)}
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                          ))}
+                          {section.items.length > 6 && (
+                            <div className={`text-[11px] px-3 pt-1 ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
+                              +{section.items.length - 6} till…
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {messages.map((msg) => (
               <div key={msg.id} className="flex gap-3">
                 {/* Avatar */}
@@ -553,6 +648,8 @@ export default function Home() {
         <WorkflowCanvas
           spec={workflow}
           previewSpec={proposal?.spec}
+          focusedNodeId={focusedNodeId}
+          onNodeClick={setFocusedNodeId}
           onNodesDelete={handleNodesDelete}
           theme={theme}
           fitViewTrigger={fitViewTrigger}
@@ -560,11 +657,10 @@ export default function Home() {
 
         {/* Status bar & Controls */}
         <div className={`absolute bottom-4 left-4 flex items-center gap-3 p-1.5 rounded-xl border backdrop-blur-sm shadow-sm ${isDark ? 'bg-black/40 border-white/10' : 'bg-white/80 border-slate-200/50'}`}>
-
           <div className="flex items-center gap-2 pl-2 pr-1">
-            <div className={`w-1.5 h-1.5 rounded-full ${workflow ? 'bg-emerald-400' : 'bg-slate-500'}`} />
+            <div className={`w-1.5 h-1.5 rounded-full ${navigatorSpec ? 'bg-emerald-400' : 'bg-slate-500'}`} />
             <span className={`text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              {workflow ? `${workflow.nodes.length} ${t.status.nodes}` : t.status.no_workflow}
+              {navigatorSpec ? `${navigatorSpec.nodes.length} ${t.status.nodes} • ${navigatorSpec.lanes.length} ${t.status.lanes}` : t.status.no_workflow}
             </span>
           </div>
 

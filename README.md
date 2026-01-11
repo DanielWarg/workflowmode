@@ -19,6 +19,8 @@ Antigravity är en AI-driven canvas för att skapa visuella arbetsflöden från 
 - **Premium Design**: Teal/Cyan tema, smooth animations, glassmorphism.
 - **Dark/Light Mode**: Fullt stöd via `useTheme`.
 - **Keyboard Shortcuts**: `Cmd+Enter` för att skicka, `Cmd+Z` för ångra.
+- **Navigator (list ↔ flow)**: Klicka på “Åtgärder/Öppna frågor/Uppföljning” för att zooma/markera rätt nod på canvasen.
+- **Fit-to-view**: Workflow autoskalar så hela flödet syns direkt efter generering.
 
 ## 🛠 Tech Stack
 

@@ -9,6 +9,14 @@ Den här filen är den taktiska checklistan som `projektplan.md` och `README.md`
 - [ ] **Enhanced Preview**
   - [ ] Overlay: "Jag hittade X beslut, Y actions..."
   - [ ] "Explain-why": klickbar förklaring på varför noder skapades.
+- [ ] **WOW-Polish**
+  - [ ] Orsak → effekt-tydlighet (t.ex. VIP “hoppar över standardflöde” via edge-label).
+  - [x] Koppla listan ↔ flödet (klick på action → highlight/zoom nod).
+  - [ ] Tydligare beslut-semantik (konsekventa “Ja/Nej”-labels, ev. ✓/✕).
+  - [ ] Tidsbadges (≤ 24h / Omedelbart / 2 veckor) på relevanta noder.
+- [ ] **Node-specific actions**
+  - [ ] Prompta om en nod (dialogruta från nod-ikon).
+  - [ ] Regenerate/refresh en nod (AI gör om just den noden).
 - [ ] **Export v1**
   - [ ] PNG-export
   - [ ] Text-export (Decisions/Actions list)

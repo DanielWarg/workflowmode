@@ -39,6 +39,14 @@ export const translations = {
             discarded: 'Proposal discarded',
             export: 'Export PNG',
         },
+        navigator: {
+            title: 'Navigator',
+            actions: 'Actions',
+            questions: 'Open questions',
+            followUps: 'Follow-up',
+            empty: 'Nothing here yet',
+            clear: 'Clear',
+        },
     },
     sv: {
         app: {
@@ -79,6 +87,14 @@ export const translations = {
             applied: 'Ändringar tillämpade och synkroniserade',
             discarded: 'Förslag kasserat',
             export: 'Exportera PNG',
+        },
+        navigator: {
+            title: 'Navigator',
+            actions: 'Åtgärder',
+            questions: 'Öppna frågor',
+            followUps: 'Uppföljning',
+            empty: 'Inget här än',
+            clear: 'Rensa',
         },
     },
 };
