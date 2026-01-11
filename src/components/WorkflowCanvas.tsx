@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useEffect } from 'react';
+import { useCallback, useMemo, useEffect, useState } from 'react';
 import {
     ReactFlow,
     Background,
@@ -12,8 +12,10 @@ import {
     BackgroundVariant,
     useNodesState,
     useEdgesState,
+    type ReactFlowInstance,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { useLanguage } from '@/components/LanguageProvider';
 
 import type { WorkflowSpec, Node as WFNode, Lane } from '@/lib/schema';
 import { StartNode, EndNode, StepNode, DecisionNode } from './nodes';
@@ -135,6 +137,7 @@ interface WorkflowCanvasProps {
     previewSpec?: WorkflowSpec | null;
     onNodeClick?: (nodeId: string) => void;
     theme?: 'dark' | 'light';
+    fitViewTrigger?: number;
 }
 
 const nodeTypes: NodeTypes = {
@@ -144,9 +147,11 @@ const nodeTypes: NodeTypes = {
     decision: DecisionNode,
 };
 
-export function WorkflowCanvas({ spec, previewSpec, onNodeClick, theme = 'dark' }: WorkflowCanvasProps) {
+export function WorkflowCanvas({ spec, previewSpec, onNodeClick, theme = 'dark', fitViewTrigger }: WorkflowCanvasProps) {
     const isDark = theme === 'dark';
     const activeSpec = previewSpec ?? spec;
+    const { t } = useLanguage();
+    const [rfInstance, setRfInstance] = useState<ReactFlowInstance | null>(null);
 
     const { nodes: transformedNodes, edges: transformedEdges } = useMemo(() => {
         if (!activeSpec) return { nodes: [], edges: [] };
@@ -162,6 +167,13 @@ export function WorkflowCanvas({ spec, previewSpec, onNodeClick, theme = 'dark' 
         setEdges(transformedEdges);
     }, [transformedNodes, transformedEdges, setNodes, setEdges]);
 
+    // Handle camera focus trigger
+    useEffect(() => {
+        if (fitViewTrigger && rfInstance) {
+            rfInstance.fitView({ padding: 0.2, duration: 800 });
+        }
+    }, [fitViewTrigger, rfInstance]);
+
     const handleNodeClick = useCallback(
         (_: React.MouseEvent, node: Node) => {
             onNodeClick?.(node.id);
@@ -173,16 +185,16 @@ export function WorkflowCanvas({ spec, previewSpec, onNodeClick, theme = 'dark' 
     if (!activeSpec) {
         return (
             <div className={`h-full w-full flex items-center justify-center ${isDark ? 'bg-[#0a0f1a]' : 'bg-slate-50'}`}>
-                <div className="text-center space-y-6 max-w-sm px-8">
-                    <div className={`w-20 h-20 mx-auto rounded-3xl flex items-center justify-center ${isDark ? 'bg-white/[0.03] border border-white/[0.06]' : 'bg-white border border-slate-200'}`}>
-                        <WorkflowIcon className={isDark ? 'text-slate-600' : 'text-slate-400'} size={32} />
+                <div className="text-center space-y-8 max-w-lg px-8 animate-in fade-in duration-700 slide-in-from-bottom-4">
+                    <div className={`w-24 h-24 mx-auto rounded-[2rem] flex items-center justify-center ${isDark ? 'bg-white/[0.03] border border-white/[0.06] shadow-2xl shadow-black/50' : 'bg-white border border-slate-200 shadow-xl shadow-slate-200/50'}`}>
+                        <WorkflowIcon className={isDark ? 'text-teal-500' : 'text-teal-600'} size={40} />
                     </div>
-                    <div className="space-y-2">
-                        <h3 className={`text-lg font-semibold ${isDark ? 'text-slate-300' : 'text-slate-800'}`}>
-                            Inget workflow ännu
+                    <div className="space-y-4">
+                        <h3 className={`text-3xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                            {t.landing.title}
                         </h3>
-                        <p className={`text-[13px] leading-relaxed ${isDark ? 'text-slate-500' : 'text-slate-500'}`}>
-                            Skriv en prompt i sidopanelen för att generera ett visuellt workflow
+                        <p className={`text-lg font-medium leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                            {t.landing.subtitle}
                         </p>
                     </div>
                 </div>
@@ -196,6 +208,7 @@ export function WorkflowCanvas({ spec, previewSpec, onNodeClick, theme = 'dark' 
         <div className={`h-full w-full relative ${isDark ? 'bg-[#0a0f1a]' : 'bg-slate-50'}`}>
             <LaneBackground lanes={activeSpec.lanes} height={canvasHeight} isDark={isDark} />
             <ReactFlow
+                onInit={setRfInstance}
                 nodes={nodes}
                 edges={edges}
                 onNodesChange={onNodesChange}
@@ -235,7 +248,7 @@ export function WorkflowCanvas({ spec, previewSpec, onNodeClick, theme = 'dark' 
                     <div className={`flex items-center gap-2.5 px-4 py-2 rounded-full shadow-lg ${isDark ? 'bg-amber-500/10 border border-amber-400/20 backdrop-blur-sm' : 'bg-amber-50 border border-amber-200'}`}>
                         <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
                         <span className={`text-[12px] font-medium ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>
-                            Förhandsgranskning
+                            {t.actions.preview}
                         </span>
                     </div>
                 </div>

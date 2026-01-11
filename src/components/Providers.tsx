@@ -2,14 +2,17 @@
 
 import { ThemeProvider } from '@/lib/theme';
 import { YjsProvider } from '@/components/YjsProvider';
+import { LanguageProvider } from '@/components/LanguageProvider';
 import { ReactNode } from 'react';
 
 export function Providers({ children }: { children: ReactNode }) {
     return (
         <ThemeProvider>
-            <YjsProvider>
-                {children}
-            </YjsProvider>
+            <LanguageProvider>
+                <YjsProvider>
+                    {children}
+                </YjsProvider>
+            </LanguageProvider>
         </ThemeProvider>
     );
 }

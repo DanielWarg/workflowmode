@@ -21,6 +21,9 @@ import {
 import type { WorkflowSpec, DiffSummary } from '@/lib/schema';
 import { useYjs } from '@/components/YjsProvider';
 import { syncYjsToSpec, syncSpecToYjs } from '@/lib/yjs-utils';
+import { WORKFLOW_PATTERNS, type WorkflowPattern } from '@/lib/patterns';
+import { useLanguage } from '@/components/LanguageProvider';
+import { UserAvatars } from '@/components/UserAvatars';
 
 interface Message {
   id: string;
@@ -37,20 +40,78 @@ interface ProposalState {
 
 export default function Home() {
   const { theme, toggleTheme } = useTheme();
+  const { t, language, setLanguage } = useLanguage();
   const { doc, status, undo, redo, canUndo, canRedo } = useYjs();
   const [prompt, setPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Command Palette State
+  const [showCommands, setShowCommands] = useState(false);
+  const [commandFilter, setCommandFilter] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [activePatternId, setActivePatternId] = useState<string | null>(null);
+  const [fitViewTrigger, setFitViewTrigger] = useState(0);
+
+  const filteredPatterns = WORKFLOW_PATTERNS.filter(p =>
+    p.command.toLowerCase().startsWith(commandFilter.toLowerCase()) ||
+    p.name.toLowerCase().includes(commandFilter.toLowerCase())
+  );
+
+  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setPrompt(val);
+    if (val.trim() === '') setActivePatternId(null);
+
+    const words = val.split('\n');
+    const lastLine = words[words.length - 1];
+    const lastWord = lastLine.split(' ').pop() || '';
+
+    if (lastWord.startsWith('/') && lastWord.length > 0) {
+      setShowCommands(true);
+      setCommandFilter(lastWord.slice(1));
+      setSelectedIndex(0);
+    } else {
+      setShowCommands(false);
+    }
+  };
+
+  const selectPattern = (pattern: WorkflowPattern) => {
+    const val = prompt;
+    const lastSlashIndex = val.lastIndexOf('/');
+    if (lastSlashIndex !== -1) {
+      const newText = val.substring(0, lastSlashIndex) + pattern.template;
+      setPrompt(newText);
+      setActivePatternId(pattern.id);
+      setShowCommands(false);
+
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = newText.length;
+        }
+      }, 10);
+    }
+  };
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
-      content: 'Hej! Beskriv det workflow du vill skapa, eller klistra in ett mötesprotokoll så genererar jag ett visuellt flöde.',
+      content: 'Hello', // Placeholder, updated by effect
       timestamp: new Date(),
     },
   ]);
+
+  useEffect(() => {
+    setMessages(prev => {
+      if (prev.length === 1 && prev[0].role === 'assistant') {
+        return [{ ...prev[0], content: t.chat.welcome }];
+      }
+      return prev;
+    });
+  }, [t.chat.welcome]);
 
   const [workflow, setWorkflow] = useState<WorkflowSpec | null>(null);
   const [proposal, setProposal] = useState<ProposalState | null>(null);
@@ -79,7 +140,7 @@ export default function Home() {
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [messages]);
 
   // Global keyboard shortcuts for Undo/Redo
@@ -115,6 +176,13 @@ export default function Home() {
     }
   }, [prompt]);
 
+  // Focus on mount if no workflow
+  useEffect(() => {
+    if (!workflow && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [workflow]);
+
   const addMessage = useCallback((role: Message['role'], content: string) => {
     setMessages((prev) => [
       ...prev,
@@ -140,7 +208,7 @@ export default function Home() {
       const endpoint = isRefine ? '/api/workflow/refine' : '/api/workflow/compile';
       const body = isRefine
         ? { spec: workflow, instruction: userPrompt }
-        : { prompt: userPrompt };
+        : { prompt: userPrompt, pattern: activePatternId || undefined };
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -159,6 +227,7 @@ export default function Home() {
         diffSummary: data.diffSummary,
         assumptions: data.assumptions,
       });
+      setFitViewTrigger(Date.now());
 
       let msg = `${data.diffSummary.summary}`;
       if (data.diffSummary.added?.length > 0) {
@@ -187,6 +256,31 @@ export default function Home() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (showCommands) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev + 1) % filteredPatterns.length);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev - 1 + filteredPatterns.length) % filteredPatterns.length);
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        if (filteredPatterns[selectedIndex]) {
+          selectPattern(filteredPatterns[selectedIndex]);
+        }
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowCommands(false);
+        return;
+      }
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
@@ -194,7 +288,7 @@ export default function Home() {
   };
 
   return (
-    <div className={`h-screen w-screen flex ${isDark ? 'bg-[#0a0f1a]' : 'bg-slate-50'}`}>
+    <div className={`fixed inset-0 flex overflow-hidden ${isDark ? 'bg-[#0a0f1a]' : 'bg-slate-50'}`}>
       {/* Sidebar */}
       <aside className={`w-[420px] flex flex-col ${isDark ? 'bg-[#0d1424] border-r border-white/[0.06]' : 'bg-white border-r border-slate-200'}`}>
 
@@ -211,27 +305,41 @@ export default function Home() {
             </div>
             <div>
               <h1 className={`text-[15px] font-semibold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                Antigravity
+                {t.app.name}
               </h1>
               <div className="flex items-center gap-1.5">
                 <WorkflowIcon className={isDark ? 'text-slate-500' : 'text-slate-400'} size={12} />
                 <span className={`text-[11px] font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                  Workflow Compiler
+                  {t.app.subtitle}
                 </span>
               </div>
             </div>
           </div>
 
-          <button
-            onClick={toggleTheme}
-            className={`p-2.5 rounded-xl transition-all duration-200 ${isDark
-              ? 'hover:bg-white/[0.04] text-slate-400 hover:text-slate-300'
-              : 'hover:bg-slate-100 text-slate-500 hover:text-slate-700'
-              }`}
-            aria-label="Byt tema"
-          >
-            {isDark ? <SunIcon size={18} /> : <MoonIcon size={18} />}
-          </button>
+          {workflow && (
+            <div className="flex items-center gap-2 animate-in fade-in duration-500">
+              <UserAvatars />
+              <button
+                onClick={() => setLanguage(language === 'en' ? 'sv' : 'en')}
+                className={`px-2 py-1 text-[11px] font-medium rounded-lg transition-all ${isDark
+                  ? 'hover:bg-white/[0.04] text-slate-400 hover:text-slate-300'
+                  : 'hover:bg-slate-100 text-slate-500 hover:text-slate-700'
+                  }`}
+              >
+                {language.toUpperCase()}
+              </button>
+              <button
+                onClick={toggleTheme}
+                className={`p-2.5 rounded-xl transition-all duration-200 ${isDark
+                  ? 'hover:bg-white/[0.04] text-slate-400 hover:text-slate-300'
+                  : 'hover:bg-slate-100 text-slate-500 hover:text-slate-700'
+                  }`}
+                aria-label={t.app.theme}
+              >
+                {isDark ? <SunIcon size={18} /> : <MoonIcon size={18} />}
+              </button>
+            </div>
+          )}
         </header>
 
         {/* Messages */}
@@ -272,7 +380,7 @@ export default function Home() {
                 <div className="flex items-center gap-2 pt-1.5">
                   <LoadingDots className={isDark ? 'text-teal-400' : 'text-teal-500'} />
                   <span className={`text-[12px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                    Genererar...
+                    {t.chat.generating}
                   </span>
                 </div>
               </div>
@@ -288,7 +396,7 @@ export default function Home() {
             <div className="flex items-center gap-2 mb-3">
               <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
               <span className={`text-[12px] font-medium ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>
-                Förhandsgranska ändringar
+                {t.actions.preview}
               </span>
             </div>
             <div className="flex gap-2">
@@ -297,7 +405,7 @@ export default function Home() {
                 className="flex-1 h-10 flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-green-500 text-white text-[13px] font-medium rounded-xl hover:from-emerald-600 hover:to-green-600 transition-all shadow-lg shadow-emerald-500/20"
               >
                 <CheckIcon size={14} />
-                Tillämpa
+                {t.actions.apply}
               </button>
               <button
                 onClick={handleDiscard}
@@ -307,7 +415,7 @@ export default function Home() {
                   }`}
               >
                 <CloseIcon size={14} />
-                Avbryt
+                {t.actions.discard}
               </button>
             </div>
           </div>
@@ -319,12 +427,48 @@ export default function Home() {
             ? 'bg-white/[0.03] border border-white/[0.06] focus-within:border-teal-500/40 focus-within:bg-white/[0.04]'
             : 'bg-slate-50 border border-slate-200 focus-within:border-teal-500 focus-within:bg-white'
             }`}>
+
+            {/* Command Palette */}
+            {showCommands && (
+              <div className={`absolute left-4 bottom-[calc(100%+8px)] mb-2 z-50 w-64 rounded-xl shadow-2xl overflow-hidden border transform transition-all duration-200 origin-bottom ${isDark ? 'bg-[#0d1424] border-white/10 shadow-black/50' : 'bg-white border-slate-200 shadow-slate-200/50'
+                }`}>
+                <div className={`px-3 py-2 text-[10px] font-bold uppercase tracking-wider border-b ${isDark ? 'text-slate-500 bg-white/[0.02] border-white/[0.04]' : 'text-slate-400 bg-slate-50 border-slate-100'
+                  }`}>
+                  {t.chat.select_pattern}
+                </div>
+                <div className="max-h-[200px] overflow-y-auto py-1">
+                  {filteredPatterns.length > 0 ? filteredPatterns.map((pattern, i) => (
+                    <button
+                      key={pattern.id}
+                      onClick={() => selectPattern(pattern)}
+                      className={`w-full text-left px-3 py-2.5 flex flex-col gap-0.5 transition-colors ${i === selectedIndex
+                        ? isDark ? 'bg-teal-500/10 text-teal-400' : 'bg-teal-50 text-teal-700'
+                        : isDark ? 'text-slate-300 hover:bg-white/[0.04]' : 'text-slate-700 hover:bg-slate-50'
+                        }`}
+                    >
+                      <span className="text-[13px] font-medium flex items-center gap-2">
+                        <WorkflowIcon size={12} className={i === selectedIndex ? 'text-teal-500' : 'opacity-40'} />
+                        /{pattern.command}
+                      </span>
+                      <span className={`text-[11px] truncate ${i === selectedIndex ? 'text-teal-500/80' : 'text-slate-500'
+                        }`}>
+                        {pattern.name}
+                      </span>
+                    </button>
+                  )) : (
+                    <div className={`px-3 py-4 text-center text-[12px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                      {t.chat.empty_patterns}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             <textarea
               ref={textareaRef}
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
+              onChange={handleInput}
               onKeyDown={handleKeyDown}
-              placeholder={workflow ? 'Beskriv ändringar...' : 'Beskriv ditt workflow...'}
+              placeholder={workflow ? t.chat.placeholder.edit : t.landing.placeholder}
               className={`w-full min-h-[52px] max-h-[160px] px-4 py-3.5 pr-12 bg-transparent text-[13px] leading-relaxed resize-none focus:outline-none ${isDark
                 ? 'text-slate-200 placeholder:text-slate-600'
                 : 'text-slate-800 placeholder:text-slate-400'
@@ -341,6 +485,7 @@ export default function Home() {
                   ? 'bg-white/[0.04] text-slate-600 cursor-not-allowed'
                   : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                 }`}
+              title={t.chat.send}
             >
               <SendIcon size={16} />
             </button>
@@ -348,11 +493,12 @@ export default function Home() {
 
           {/* Keyboard hint */}
           <div className={`mt-2.5 flex items-center justify-center gap-1.5 ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
-            <span className="text-[11px]">Tryck</span>
             <kbd className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${isDark ? 'bg-white/[0.04] border border-white/[0.08]' : 'bg-slate-100 border border-slate-200'}`}>
               Enter
             </kbd>
-            <span className="text-[11px]">för att skicka</span>
+            <span className="text-[11px]">{t.chat.hint}</span>
+            <span className="mx-1 opacity-40">•</span>
+            <span className="text-[11px] opacity-75">{t.chat.command_hint}</span>
           </div>
         </div>
       </aside>
@@ -363,6 +509,7 @@ export default function Home() {
           spec={workflow}
           previewSpec={proposal?.spec}
           theme={theme}
+          fitViewTrigger={fitViewTrigger}
         />
 
         {/* Status bar & Controls */}
@@ -371,7 +518,7 @@ export default function Home() {
           <div className="flex items-center gap-2 pl-2 pr-1">
             <div className={`w-1.5 h-1.5 rounded-full ${workflow ? 'bg-emerald-400' : 'bg-slate-500'}`} />
             <span className={`text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              {workflow ? `${workflow.nodes.length} noder` : '0 noder'}
+              {workflow ? `${workflow.nodes.length} ${t.status.nodes}` : t.status.no_workflow}
             </span>
           </div>
 
@@ -385,7 +532,7 @@ export default function Home() {
                 ? isDark ? 'hover:bg-white/10 text-slate-400 hover:text-white' : 'hover:bg-slate-100 text-slate-500 hover:text-slate-900'
                 : isDark ? 'text-slate-700 cursor-not-allowed' : 'text-slate-300 cursor-not-allowed'
                 }`}
-              title="Ångra (Cmd+Z)"
+              title={t.actions.undo}
             >
               <UndoIcon size={14} />
             </button>
@@ -396,7 +543,7 @@ export default function Home() {
                 ? isDark ? 'hover:bg-white/10 text-slate-400 hover:text-white' : 'hover:bg-slate-100 text-slate-500 hover:text-slate-900'
                 : isDark ? 'text-slate-700 cursor-not-allowed' : 'text-slate-300 cursor-not-allowed'
                 }`}
-              title="Gör om (Cmd+Shift+Z)"
+              title={t.actions.redo}
             >
               <RedoIcon size={14} />
             </button>

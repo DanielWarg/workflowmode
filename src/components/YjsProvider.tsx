@@ -1,8 +1,7 @@
-'use client';
-
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import * as Y from 'yjs';
 import { HocuspocusProvider } from '@hocuspocus/provider';
+import { Awareness } from 'y-protocols/awareness';
 
 interface YjsContextType {
     provider: HocuspocusProvider | null;
@@ -12,9 +11,21 @@ interface YjsContextType {
     redo: () => void;
     canUndo: boolean;
     canRedo: boolean;
+    awareness: Awareness | null;
 }
 
 const YjsContext = createContext<YjsContextType | undefined>(undefined);
+
+const ADJECTIVES = ['Happy', 'Swift', 'Clever', 'Brave', 'Calm', 'Bright', 'Eager'];
+const ANIMALS = ['Fox', 'Eagle', 'Bear', 'Lion', 'Wolf', 'Hawk', 'Owl'];
+const COLORS = ['#f87171', '#fbbf24', '#34d399', '#60a5fa', '#a78bfa', '#f472b6'];
+
+function getRandomIdentity() {
+    const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
+    const animal = ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
+    const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+    return { name: `${adj} ${animal}`, color };
+}
 
 export function YjsProvider({ children }: { children: ReactNode }) {
     const [provider, setProvider] = useState<HocuspocusProvider | null>(null);
@@ -23,21 +34,19 @@ export function YjsProvider({ children }: { children: ReactNode }) {
     const [status, setStatus] = useState<YjsContextType['status']>('disconnected');
     const [canUndo, setCanUndo] = useState(false);
     const [canRedo, setCanRedo] = useState(false);
+    const [awareness, setAwareness] = useState<Awareness | null>(null);
 
     useEffect(() => {
-        // Skapa Yjs dokument
         const yDoc = new Y.Doc();
 
-        // Anslut till Hocuspocus server
         const wsProvider = new HocuspocusProvider({
             url: 'ws://localhost:1234',
-            name: 'workflow-v1', // Globalt rum för test
+            name: 'workflow-v1',
             document: yDoc,
             onConnect: () => setStatus('connected'),
             onDisconnect: () => setStatus('disconnected'),
         });
 
-        // Setup UndoManager
         const um = new Y.UndoManager([
             yDoc.getMap('nodes'),
             yDoc.getMap('edges'),
@@ -55,12 +64,16 @@ export function YjsProvider({ children }: { children: ReactNode }) {
             setCanRedo(um.redoStack.length > 0);
         });
 
+        // Set random identity
+        const { name, color } = getRandomIdentity();
+        wsProvider.awareness.setLocalStateField('user', { name, color });
+
         setProvider(wsProvider);
         setDoc(yDoc);
         setUndoManager(um);
+        setAwareness(wsProvider.awareness);
         setStatus('connecting');
 
-        // Cleanup
         return () => {
             wsProvider.destroy();
             um.destroy();
@@ -76,7 +89,7 @@ export function YjsProvider({ children }: { children: ReactNode }) {
     }, [undoManager]);
 
     return (
-        <YjsContext.Provider value={{ provider, doc, status, undo, redo, canUndo, canRedo }}>
+        <YjsContext.Provider value={{ provider, doc, status, undo, redo, canUndo, canRedo, awareness }}>
             {children}
         </YjsContext.Provider>
     );
@@ -89,3 +102,4 @@ export function useYjs() {
     }
     return context;
 }
+

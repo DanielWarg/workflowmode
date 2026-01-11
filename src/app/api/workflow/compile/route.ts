@@ -1,42 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { WorkflowSpecSchema, type WorkflowSpec, type DiffSummary } from '@/lib/schema';
+import { BASE_SYSTEM_PROMPT, PATTERN_INSTRUCTIONS } from '@/lib/ai/prompts';
+import { MEETING_SYSTEM_PROMPT } from '@/lib/ai/meeting-prompts';
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
 
-const SYSTEM_PROMPT = `Du är en expert-workflow-kompilator. Din uppgift är att konvertera användarens beskrivning eller mötesprotokoll till ett strukturerat workflow.
-
-Du ska returnera ett JSON-objekt med följande struktur:
-{
-  "workflowSpec": {
-    "lanes": [{ "id": "lane-xxx", "name": "Rollnamn", "order": 0 }],
-    "nodes": [{ "id": "node-xxx", "type": "start|end|step|decision", "laneId": "lane-xxx", "title": "Titel", "description": "Beskrivning" }],
-    "edges": [{ "id": "edge-xxx", "from": "node-id", "to": "node-id", "type": "normal|decision_yes|decision_no|loop|escalation", "label": "Etikett" }],
-    "metadata": { "language": "sv", "version": 1 }
-  },
-  "diffSummary": {
-    "added": ["Lista av saker som lades till"],
-    "removed": [],
-    "modified": [],
-    "summary": "Kort sammanfattning av vad som skapades"
-  },
-  "assumptions": ["Lista av antaganden du gjorde"]
-}
-
-Regler:
-1. Varje workflow MÅSTE ha exakt en "start"-nod och minst en "end"-nod
-2. Använd lanes för att representera roller/aktörer/avdelningar
-3. Beslut (decision) ska ha två utgående edges: decision_yes och decision_no
-4. Använd svenska titlar och beskrivningar
-5. Generera unika ID:n med prefix (lane-, node-, edge-)
-6. Om input är ett mötesprotokoll, extrahera beslut, actions och ansvar
-7. Returnera ENDAST valid JSON, ingen annan text`;
-
 interface CompileRequest {
     prompt: string;
     context?: string;
+    pattern?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -45,28 +20,41 @@ export async function POST(request: NextRequest) {
 
         if (!body.prompt || body.prompt.trim().length === 0) {
             return NextResponse.json(
-                { error: 'Prompt krävs' },
+                { error: 'Prompt required' },
                 { status: 400 }
             );
         }
 
-        // Rate limiting check (basic - should be enhanced for production)
+        // Rate limiting check
         const promptLength = body.prompt.length + (body.context?.length || 0);
         if (promptLength > 10000) {
             return NextResponse.json(
-                { error: 'Input för lång (max 10000 tecken)' },
+                { error: 'Input too long (max 10000 chars)' },
                 { status: 400 }
             );
         }
 
+        let systemPrompt = BASE_SYSTEM_PROMPT;
+
+        if (body.pattern && PATTERN_INSTRUCTIONS[body.pattern]) {
+            systemPrompt += `\n\n${PATTERN_INSTRUCTIONS[body.pattern]}`;
+        } else {
+            // Auto-detect meeting notes: crude heuristic (multi-line input)
+            const isMeetingNotes = body.prompt.split('\n').filter(line => line.trim().length > 0).length >= 3;
+            if (isMeetingNotes) {
+                console.log('Detected Meeting Notes mode');
+                systemPrompt = MEETING_SYSTEM_PROMPT;
+            }
+        }
+
         const userMessage = body.context
-            ? `Kontext: ${body.context}\n\nPrompt: ${body.prompt}`
+            ? `Context: ${body.context}\n\nPrompt: ${body.prompt}`
             : body.prompt;
 
         const completion = await openai.chat.completions.create({
             model: 'gpt-4o',
             messages: [
-                { role: 'system', content: SYSTEM_PROMPT },
+                { role: 'system', content: systemPrompt },
                 { role: 'user', content: userMessage },
             ],
             temperature: 0.7,
@@ -77,7 +65,7 @@ export async function POST(request: NextRequest) {
 
         if (!content) {
             return NextResponse.json(
-                { error: 'Inget svar från AI' },
+                { error: 'No response from AI' },
                 { status: 500 }
             );
         }
@@ -88,7 +76,7 @@ export async function POST(request: NextRequest) {
             parsed = JSON.parse(content);
         } catch {
             return NextResponse.json(
-                { error: 'Kunde inte tolka AI-svar som JSON' },
+                { error: 'Failed to parse AI response as JSON' },
                 { status: 500 }
             );
         }
@@ -99,7 +87,7 @@ export async function POST(request: NextRequest) {
             console.error('Schema validation failed:', validation.error);
             return NextResponse.json(
                 {
-                    error: 'Workflow-specifikationen är inte valid',
+                    error: 'Workflow spec validation failed',
                     details: validation.error.issues,
                 },
                 { status: 500 }
@@ -109,17 +97,17 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             workflowSpec: validation.data,
             diffSummary: parsed.diffSummary || {
-                added: ['Nytt workflow skapat'],
+                added: ['New workflow created'],
                 removed: [],
                 modified: [],
-                summary: 'Workflow genererat från prompt',
+                summary: 'Workflow generated from prompt',
             },
             assumptions: parsed.assumptions || [],
         });
     } catch (error) {
         console.error('Compile error:', error);
         return NextResponse.json(
-            { error: 'Ett fel uppstod vid kompilering' },
+            { error: 'Internal server error during compilation' },
             { status: 500 }
         );
     }
