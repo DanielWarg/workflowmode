@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@hocuspocus/provider": "^3.4.3",
-    "@hocuspocus/server": "^3.4.3",
+    "@hocuspocus/server": "^3.4.4",
     "@supabase/supabase-js": "^2.90.1",
     "@xyflow/react": "^12.10.0",
     "dotenv": "^17.2.3",
