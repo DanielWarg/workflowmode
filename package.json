@@ -23,7 +23,7 @@
     "react-dom": "19.2.3",
     "y-protocols": "^1.0.7",
     "yjs": "^13.6.29",
-    "zod": "^4.3.5"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
